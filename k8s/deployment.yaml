@@ -1,0 +1,75 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: datumbridge-mcp
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: office365-mcp-config
+  namespace: datumbridge-mcp
+data:
+  OFFICE365_TENANT_ID: "common"
+  OFFICE365_ENABLE_OAUTH_UI: "0"
+  LOG_LEVEL: "INFO"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: office365-mcp-secret
+  namespace: datumbridge-mcp
+type: Opaque
+stringData:
+  OFFICE365_CLIENT_ID: ""
+  OFFICE365_CLIENT_SECRET: ""
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: office365-mcp
+  namespace: datumbridge-mcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: office365-mcp
+  template:
+    metadata:
+      labels:
+        app: office365-mcp
+    spec:
+      containers:
+        - name: office365-mcp
+          image: office365-mcp:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: office365-mcp-config
+            - secretRef:
+                name: office365-mcp-secret
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: office365-mcp
+  namespace: datumbridge-mcp
+spec:
+  selector:
+    app: office365-mcp
+  ports:
+    - port: 8000
+      targetPort: 8000

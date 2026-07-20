@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Office 365 MCP — Test UI</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 960px; }
+    textarea, input { width: 100%; margin: 0.25rem 0 1rem; }
+    pre { background: #f4f4f4; padding: 1rem; overflow: auto; }
+    button { margin-right: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>Office 365 MCP — Test UI</h1>
+  <p>
+    <a href="/oauth/start">Connect with Microsoft</a>
+    · Paste token JSON below after OAuth or <code>scripts/oauth_connect.py</code>
+  </p>
+  <label>Credentials JSON</label>
+  <textarea id="creds" rows="6" placeholder='{"access_token":"...","refresh_token":"..."}'></textarea>
+  <label>Tool</label>
+  <select id="tool">
+    <option value="list_files">list_files</option>
+    <option value="get_file_metadata">get_file_metadata</option>
+    <option value="read_file">read_file</option>
+    <option value="download_file">download_file</option>
+  </select>
+  <label>Arguments (JSON)</label>
+  <textarea id="args" rows="8">{"drive_type":"onedrive","folder_path":"Documents"}</textarea>
+  <button id="run">Call MCP tool</button>
+  <h2>Response</h2>
+  <pre id="out">(none)</pre>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const state = params.get("oauth_state");
+    if (state) {
+      fetch("/oauth/token?state=" + encodeURIComponent(state))
+        .then(r => r.json())
+        .then(c => { document.getElementById("creds").value = JSON.stringify(c, null, 2); });
+    }
+    document.getElementById("run").onclick = async () => {
+      const creds = document.getElementById("creds").value;
+      const tool = document.getElementById("tool").value;
+      let args = {};
+      try { args = JSON.parse(document.getElementById("args").value || "{}"); } catch (e) { alert("Invalid JSON"); return; }
+      args.credentials_json = creds;
+      const res = await fetch("/mcp/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "tools/call",
+          params: { name: tool, arguments: args }
+        })
+      });
+      document.getElementById("out").textContent = await res.text();
+    };
+  </script>
+</body>
+</html>
