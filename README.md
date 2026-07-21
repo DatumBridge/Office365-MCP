@@ -4,6 +4,8 @@ DatumBridge **tool-server** for **OneDrive** and **SharePoint** file operations 
 
 **Registry id:** `mcpServer=office365`
 
+**Production (DatumBridge Studio):** connect under **Account → Integrations**. The platform credential vault injects `credentials_json` on tool execute — do not map tokens in workflows.
+
 ## Tools
 
 | Tool | Description |
