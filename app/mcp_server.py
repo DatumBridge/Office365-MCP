@@ -35,6 +35,7 @@ from app.schemas.mcp_models import (
     TeamListResponse,
 )
 from app.services.graph_service import GraphService
+from app.capability_bind import bind_declared_capabilities
 
 logger = logging.getLogger(__name__)
 
@@ -704,6 +705,9 @@ Outputs: success
     except GraphError as e:
         return SendMessageResponse(success=False, error=_error_dict(e))
 
+
+
+bind_declared_capabilities(mcp)
 
 _base_app = mcp.http_app()
 
