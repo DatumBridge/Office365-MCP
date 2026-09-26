@@ -17,6 +17,12 @@ DatumBridge **tool-server** for **OneDrive** and **SharePoint** file operations 
 | `create_file` | Upload PDF, Word, Excel, PowerPoint (`confirm=true`) |
 | `delete_file` | Delete file (`confirm=true`) |
 | `create_folder` | Create a folder |
+| `list_chats` | List Teams chats for the signed-in user |
+| `send_chat_message` | Send a Teams chat message (`confirm=true`) |
+| `list_joined_teams` | List joined teams |
+| `list_team_channels` | List channels in a team |
+| `list_channel_messages` | List channel messages |
+| `send_channel_message` | Send a channel message (`confirm=true`) |
 
 ### Supported file types
 

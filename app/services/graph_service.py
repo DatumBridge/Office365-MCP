@@ -31,6 +31,11 @@ DEFAULT_SCOPES = (
     "User.Read",
     "Files.ReadWrite",
     "Sites.ReadWrite.All",
+    "Chat.ReadWrite",
+    "ChannelMessage.Send",
+    "ChannelMessage.Read.All",
+    "Team.ReadBasic.All",
+    "Channel.ReadBasic.All",
 )
 DEFAULT_TIMEOUT_SEC = 60
 MAX_SIMPLE_UPLOAD_BYTES = 4 * 1024 * 1024  # Graph simple upload limit
@@ -581,3 +586,130 @@ class GraphService:
 
         item = self._request("POST", url, json_body=body)
         return self._to_metadata(item)
+
+    def list_chats(
+        self,
+        *,
+        page_size: int = 50,
+        skip_token: Optional[str] = None,
+    ) -> tuple[list[dict], Optional[str]]:
+        params: dict[str, Any] = {"$top": max(1, min(page_size, 50))}
+        if skip_token:
+            params["$skiptoken"] = skip_token
+        data = self._request("GET", f"{GRAPH_BASE}/me/chats", params=params)
+        items = []
+        for chat in data.get("value") or []:
+            items.append(
+                {
+                    "id": chat.get("id"),
+                    "topic": chat.get("topic"),
+                    "chat_type": chat.get("chatType"),
+                    "web_url": chat.get("webUrl"),
+                    "last_updated": chat.get("lastUpdatedDateTime"),
+                }
+            )
+        next_link = data.get("@odata.nextLink") or ""
+        next_token = None
+        if "skiptoken=" in next_link:
+            next_token = next_link.split("skiptoken=", 1)[-1]
+        return items, next_token
+
+    def send_chat_message(self, *, chat_id: str, content: str) -> dict:
+        cid = (chat_id or "").strip()
+        body = (content or "").strip()
+        if not cid or not body:
+            raise GraphValidationError("chat_id and content are required")
+        data = self._request(
+            "POST",
+            f"{GRAPH_BASE}/me/chats/{quote(cid, safe='')}/messages",
+            json_body={"body": {"content": body}},
+        )
+        return {
+            "id": data.get("id"),
+            "chat_id": cid,
+            "created": data.get("createdDateTime"),
+            "web_url": data.get("webUrl"),
+        }
+
+    def list_joined_teams(self) -> list[dict]:
+        data = self._request("GET", f"{GRAPH_BASE}/me/joinedTeams")
+        out = []
+        for team in data.get("value") or []:
+            out.append(
+                {
+                    "id": team.get("id"),
+                    "display_name": team.get("displayName"),
+                    "description": team.get("description"),
+                }
+            )
+        return out
+
+    def list_team_channels(self, *, team_id: str) -> list[dict]:
+        tid = (team_id or "").strip()
+        if not tid:
+            raise GraphValidationError("team_id is required")
+        data = self._request(
+            "GET", f"{GRAPH_BASE}/teams/{quote(tid, safe='')}/channels"
+        )
+        out = []
+        for ch in data.get("value") or []:
+            out.append(
+                {
+                    "id": ch.get("id"),
+                    "display_name": ch.get("displayName"),
+                    "membership_type": ch.get("membershipType"),
+                    "web_url": ch.get("webUrl"),
+                }
+            )
+        return out
+
+    def list_channel_messages(
+        self,
+        *,
+        team_id: str,
+        channel_id: str,
+        page_size: int = 50,
+    ) -> list[dict]:
+        tid = (team_id or "").strip()
+        cid = (channel_id or "").strip()
+        if not tid or not cid:
+            raise GraphValidationError("team_id and channel_id are required")
+        data = self._request(
+            "GET",
+            f"{GRAPH_BASE}/teams/{quote(tid, safe='')}/channels/{quote(cid, safe='')}/messages",
+            params={"$top": max(1, min(page_size, 50))},
+        )
+        out = []
+        for msg in data.get("value") or []:
+            body = msg.get("body") or {}
+            from_user = ((msg.get("from") or {}).get("user") or {})
+            out.append(
+                {
+                    "id": msg.get("id"),
+                    "created": msg.get("createdDateTime"),
+                    "from_name": from_user.get("displayName"),
+                    "content": body.get("content"),
+                }
+            )
+        return out
+
+    def send_channel_message(
+        self, *, team_id: str, channel_id: str, content: str
+    ) -> dict:
+        tid = (team_id or "").strip()
+        cid = (channel_id or "").strip()
+        body = (content or "").strip()
+        if not tid or not cid or not body:
+            raise GraphValidationError("team_id, channel_id, and content are required")
+        data = self._request(
+            "POST",
+            f"{GRAPH_BASE}/teams/{quote(tid, safe='')}/channels/{quote(cid, safe='')}/messages",
+            json_body={"body": {"content": body}},
+        )
+        return {
+            "id": data.get("id"),
+            "team_id": tid,
+            "channel_id": cid,
+            "created": data.get("createdDateTime"),
+            "web_url": data.get("webUrl"),
+        }

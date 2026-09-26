@@ -9,6 +9,9 @@
 | `app/services/file_types.py` | PDF/Office MIME validation |
 | `app/oauth_routes.py` | Optional local OAuth connect flow |
 
+- Files: OneDrive / SharePoint via Microsoft Graph
+- Chat: Teams chats and channel messages (same delegated token; extra consent)
+
 ## Data flow
 
 1. Agent invokes MCP tool with OAuth credentials.

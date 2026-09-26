@@ -1,75 +1,98 @@
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: datumbridge-mcp
----
-apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: office365-mcp-config
-  namespace: datumbridge-mcp
+  name: office365-mcp-main-config
+  namespace: mcp-tools
 data:
-  OFFICE365_TENANT_ID: "common"
-  OFFICE365_ENABLE_OAUTH_UI: "0"
+  PORT: "8000"
   LOG_LEVEL: "INFO"
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: office365-mcp-secret
-  namespace: datumbridge-mcp
-type: Opaque
-stringData:
-  OFFICE365_CLIENT_ID: ""
-  OFFICE365_CLIENT_SECRET: ""
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: office365-mcp
-  namespace: datumbridge-mcp
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: office365-mcp
-  template:
-    metadata:
-      labels:
-        app: office365-mcp
-    spec:
-      containers:
-        - name: office365-mcp
-          image: office365-mcp:latest
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 8000
-          envFrom:
-            - configMapRef:
-                name: office365-mcp-config
-            - secretRef:
-                name: office365-mcp-secret
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 8000
-            initialDelaySeconds: 15
-            periodSeconds: 30
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 8000
-            initialDelaySeconds: 5
-            periodSeconds: 10
+  OFFICE365_ENABLE_OAUTH_UI: "0"
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: office365-mcp
-  namespace: datumbridge-mcp
+  name: office365-mcp-main
+  namespace: mcp-tools
+  labels:
+    app: office365-mcp-main
 spec:
   selector:
-    app: office365-mcp
+    app: office365-mcp-main
   ports:
-    - port: 8000
+    - name: http
+      port: 8000
       targetPort: 8000
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: office365-mcp-main
+  namespace: mcp-tools
+  labels:
+    app: office365-mcp-main
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: office365-mcp-main
+  template:
+    metadata:
+      labels:
+        app: office365-mcp-main
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: tool
+          image: office365-mcp:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: office365-mcp-main-config
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            privileged: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: tmp
+          emptyDir: {}

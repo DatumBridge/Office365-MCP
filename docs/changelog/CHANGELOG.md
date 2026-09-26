@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-08-26
+
+### Added
+
+- Teams Graph tools on the same Microsoft 365 Connect: `list_chats`, `send_chat_message`, `list_joined_teams`, `list_team_channels`, `list_channel_messages`, `send_channel_message`. Writes require `confirm=true`.
+- k8s publish target namespace `mcp-tools` (`office365-mcp-main`).
+
+### Changed
+
+- Delegated Graph scopes now include Chat/Channel/Team read-write. Existing Studio Connect users must Disconnect and Connect again.
+
 ## 2026-07-20
 
 ### Added
