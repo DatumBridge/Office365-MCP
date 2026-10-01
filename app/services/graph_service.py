@@ -24,16 +24,24 @@ from app.core.exceptions import (
 from app.services.file_types import infer_mime_type, is_folder_mime, validate_supported_file_name
 
 GRAPH_BASE = "https://graph.microsoft.com/v1.0"
+# Read scopes list SharePoint sites and files. Do not request the write and
+# Teams-read scopes removed from the Azure app; refresh fails if they are sent.
+DROPPED_SCOPES = frozenset(
+    {
+        "Files.ReadWrite",
+        "Sites.ReadWrite.All",
+        "Chat.ReadWrite",
+        "ChannelMessage.Read.All",
+    }
+)
 DEFAULT_SCOPES = (
     "openid",
     "profile",
     "offline_access",
     "User.Read",
-    "Files.ReadWrite",
-    "Sites.ReadWrite.All",
-    "Chat.ReadWrite",
+    "Files.Read.All",
+    "Sites.Read.All",
     "ChannelMessage.Send",
-    "ChannelMessage.Read.All",
     "Team.ReadBasic.All",
     "Channel.ReadBasic.All",
 )
@@ -157,6 +165,20 @@ def _client_credentials(creds_dict: dict) -> tuple[str, str]:
     return client_id.strip(), client_secret.strip()
 
 
+def scopes_for_refresh(creds_dict: dict) -> list[str]:
+    """Keep a refresh inside scopes the tenant still grants."""
+    raw = creds_dict.get("scopes") or list(DEFAULT_SCOPES)
+    kept: list[str] = []
+    seen: set[str] = set()
+    for scope in raw:
+        name = str(scope).strip()
+        if not name or name in DROPPED_SCOPES or name in seen:
+            continue
+        seen.add(name)
+        kept.append(name)
+    return kept or list(DEFAULT_SCOPES)
+
+
 def refresh_access_token(creds_dict: dict) -> dict:
     refresh_token = creds_dict.get("refresh_token")
     if not refresh_token:
@@ -178,7 +200,7 @@ def refresh_access_token(creds_dict: dict) -> dict:
         "refresh_token": refresh_token,
         "client_id": client_id,
         "client_secret": client_secret,
-        "scope": " ".join(creds_dict.get("scopes") or DEFAULT_SCOPES),
+        "scope": " ".join(scopes_for_refresh(creds_dict)),
     }
     try:
         resp = requests.post(_token_url(), data=body, timeout=_request_timeout())

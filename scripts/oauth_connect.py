@@ -18,8 +18,8 @@ SCOPES = [
     "profile",
     "offline_access",
     "User.Read",
-    "Files.ReadWrite",
-    "Sites.ReadWrite.All",
+    "Files.Read.All",
+    "Sites.Read.All",
 ]
 
 
