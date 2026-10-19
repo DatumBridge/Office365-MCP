@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-14
+
+### Changed
+
+- Outlook mail is not in this server. Use sibling `outlook-mcp` and a separate Azure app.
+
 ## 2026-08-26
 
 ### Added

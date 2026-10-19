@@ -1,6 +1,6 @@
 # Office 365 MCP Server
 
-DatumBridge **tool-server** for **OneDrive** and **SharePoint** file operations via **Microsoft Graph**. Sibling to `google-drive-mcp` and `gmail-mcp`.
+DatumBridge **tool-server** for **OneDrive** and **SharePoint** file operations via **Microsoft Graph**. Sibling to `google-drive-mcp`. **Outlook mail is `outlook-mcp`**, a separate Azure app — do not add Mail Graph permissions here.
 
 **Registry id:** `mcpServer=office365`
 

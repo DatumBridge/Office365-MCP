@@ -44,4 +44,4 @@ OneDrive (/me/drive) | SharePoint (/sites/{id}/drive)
 
 - Large-file resumable upload sessions (>4 MiB)
 - Server-side Office text extraction
-- Exchange / Outlook / Teams APIs
+- Exchange / Outlook mail (use sibling `outlook-mcp` and a separate Azure app)
