@@ -11,6 +11,7 @@
 
 ### Changed
 
+- Every `registry_docs/*.md` guide now follows the MCP tool contract: audience, agent rules, when to call, typed parameters with samples and related tools, success fields, handler error codes, and cases. List tools document `next_skip_token` because the handler does not return `paging` or `total_page`.
 - Excel reads that set `excel_format` no longer return `content_base64`. Other files are unchanged.
 - Legacy `.xls`, encrypted workbooks, and macro execution stay unsupported. Formulas are returned as text and are not calculated.
 - Oversized workbooks are rejected from item size before download, and the body is streamed only up to 8 MiB. Package XML is parsed with `defusedxml`. Only store and deflate ZIP members are accepted. A value past a blank row or column still sets `truncated`. Serialized JSON or XML is capped at 1,000,000 characters.

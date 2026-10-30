@@ -2,6 +2,10 @@
 
 Office 365 MCP tools are MCP tools, not REST resources. The HTTP app exposes `POST /mcp/` and `GET /health`.
 
+The planner contract for each tool is `registry_docs/<tool>.md`, copied onto `x-datumbridge-docs` at bind time. Those guides follow the MCP tool template: audience (`external` / `required`), agent rules, when to call, parameters (name, required, type, sample, related tool, meaning), success fields, error codes, and cases. Deep fills arguments from that text. A schema change is not visible until the image is deployed and Tool Registry Setup runs again.
+
+List tools return `next_skip_token`. They do not return `paging` or `total_page`.
+
 ## read_file
 
 Reads a OneDrive or SharePoint drive item.
