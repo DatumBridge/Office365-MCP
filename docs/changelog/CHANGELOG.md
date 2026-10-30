@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-30
+
+### Added
+
+- `read_file` can transform Excel `.xlsx` and `.xlsm` cell values to JSON or XML via `excel_format`.
+- Optional `sheet_name` to read one worksheet, and `header_row` to return JSON rows as objects keyed by the first non-empty row.
+- Response fields `content_json`, `content_xml`, `excel_format`, and `truncated`.
+- In-memory workbook limits: 8 MiB file, 32 MiB declared uncompressed size, 512 package entries, 32 sheets, 2000 rows, 50 columns, 20000 cells, 1,000,000 characters of cell text.
+
+### Changed
+
+- Excel reads that set `excel_format` no longer return `content_base64`. Other files are unchanged.
+- Legacy `.xls`, encrypted workbooks, and macro execution stay unsupported. Formulas are returned as text and are not calculated.
+- Oversized workbooks are rejected from item size before download, and the body is streamed only up to 8 MiB. Package XML is parsed with `defusedxml`. Only store and deflate ZIP members are accepted. A value past a blank row or column still sets `truncated`. Serialized JSON or XML is capped at 1,000,000 characters.
+
 ## 2026-10-14
 
 ### Changed

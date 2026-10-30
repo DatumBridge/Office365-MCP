@@ -12,7 +12,7 @@ DatumBridge **tool-server** for **OneDrive** and **SharePoint** file operations 
 |------|-------------|
 | `list_files` | Browse folders (OneDrive or SharePoint) |
 | `get_file_metadata` | Read file/folder properties |
-| `read_file` | Metadata + content (base64 for PDF/Office binaries) |
+| `read_file` | Metadata + content. Excel `.xlsx`/`.xlsm` can be returned as JSON or XML |
 | `download_file` | Download by `item_id` or `file_path` |
 | `create_file` | Upload PDF, Word, Excel, PowerPoint (`confirm=true`) |
 | `delete_file` | Delete file (`confirm=true`) |
@@ -83,7 +83,7 @@ python scripts/oauth_connect.py
 ### Tests (no network)
 
 ```bash
-python scripts/test_helpers.py -v
+PYTHONPATH=. python -m unittest tests.test_excel_workbook scripts.test_helpers -v
 ```
 
 ## Docker
@@ -121,6 +121,20 @@ docker run -p 8000:8000 \
 }
 ```
 
+**Read an Excel workbook as JSON:**
+
+```json
+{
+  "drive_type": "onedrive",
+  "file_path": "Documents/orders.xlsx",
+  "excel_format": "json",
+  "header_row": true,
+  "credentials_path": "token.json"
+}
+```
+
+`excel_format` is `json` or `xml`. Omit it to keep the raw file as base64. `sheet_name` limits the read to one worksheet. Formulas are returned as formula text and are not calculated.
+
 **Read SharePoint file:**
 
 ```json
@@ -136,7 +150,8 @@ docker run -p 8000:8000 \
 ## Limits
 
 - Simple upload max **4 MiB** per `create_file` (Microsoft Graph simple upload). Larger files need upload session support (future).
-- Office binary content is returned as **base64**; text extraction is not performed server-side.
+- Without `excel_format`, Office and PDF bytes are returned as **base64**.
+- `read_file` with `excel_format=json` or `excel_format=xml` parses `.xlsx` and `.xlsm` in memory. The raw file must be at most **8 MiB**, with at most **2000** rows and **50** columns per sheet. Legacy `.xls` is not parsed. Formulas and macros are not executed.
 
 ## Docs
 

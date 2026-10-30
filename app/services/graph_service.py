@@ -21,6 +21,12 @@ from app.core.exceptions import (
     GraphValidationError,
     normalize_graph_error,
 )
+from app.services.excel_workbook import (
+    MAX_WORKBOOK_BYTES,
+    is_excel_file,
+    normalize_excel_format,
+    transform_excel,
+)
 from app.services.file_types import infer_mime_type, is_folder_mime, validate_supported_file_name
 
 GRAPH_BASE = "https://graph.microsoft.com/v1.0"
@@ -222,6 +228,22 @@ def refresh_access_token(creds_dict: dict) -> dict:
     return creds_dict
 
 
+def read_capped_chunks(chunks, max_bytes: int) -> bytes:
+    """Join a download and stop once it passes max_bytes."""
+    total = 0
+    parts: list[bytes] = []
+    for chunk in chunks:
+        if not chunk:
+            continue
+        total += len(chunk)
+        if total > max_bytes:
+            raise GraphValidationError(
+                f"Excel workbook exceeds the {max_bytes} byte read limit"
+            )
+        parts.append(chunk)
+    return b"".join(parts)
+
+
 class GraphService:
     """Microsoft Graph wrapper for OneDrive and SharePoint drives."""
 
@@ -257,7 +279,10 @@ class GraphService:
         data: Optional[bytes] = None,
         content_type: Optional[str] = None,
         raw: bool = False,
+        max_bytes: Optional[int] = None,
     ) -> Any:
+        stream = max_bytes is not None
+        resp = None
         try:
             resp = requests.request(
                 method,
@@ -267,8 +292,10 @@ class GraphService:
                 json=json_body,
                 data=data,
                 timeout=_request_timeout(),
+                stream=stream,
             )
             if resp.status_code == 401:
+                resp.close()
                 self._creds = refresh_access_token(self._creds)
                 resp = requests.request(
                     method,
@@ -278,12 +305,15 @@ class GraphService:
                     json=json_body,
                     data=data,
                     timeout=_request_timeout(),
+                    stream=stream,
                 )
             if resp.status_code >= 400:
                 detail = resp.text[:500] if resp.text else resp.reason
                 raise normalize_graph_error(
                     Exception(detail), status_code=resp.status_code
                 )
+            if raw and max_bytes is not None:
+                return read_capped_chunks(resp.iter_content(64 * 1024), max_bytes)
             if raw:
                 return resp.content
             if resp.status_code == 204 or not resp.content:
@@ -293,6 +323,9 @@ class GraphService:
             raise
         except requests.RequestException as e:
             raise normalize_graph_error(e) from e
+        finally:
+            if stream and resp is not None:
+                resp.close()
 
     def _normalize_drive_location(
         self,
@@ -436,7 +469,13 @@ class GraphService:
         file_path: Optional[str] = None,
         include_content: bool = True,
         as_text: bool = False,
+        excel_format: Optional[str] = None,
+        sheet_name: Optional[str] = None,
+        header_row: bool = False,
     ) -> dict:
+        fmt = normalize_excel_format(excel_format)
+        if fmt and not include_content:
+            raise GraphValidationError("excel_format requires include_content=true")
         metadata = self.get_file_metadata(
             drive_type=drive_type,
             site_hostname=site_hostname,
@@ -450,6 +489,16 @@ class GraphService:
         result = {"metadata": metadata}
         if not include_content:
             return result
+        if fmt and not is_excel_file(metadata.get("name"), metadata.get("mime_type")):
+            raise GraphValidationError(
+                "excel_format applies only to Excel workbooks (.xlsx, .xlsm, or .xls). "
+                "Legacy .xls must be saved as .xlsx before it can be transformed."
+            )
+        declared_size = metadata.get("size")
+        if fmt and isinstance(declared_size, int) and declared_size > MAX_WORKBOOK_BYTES:
+            raise GraphValidationError(
+                f"Excel workbook exceeds the {MAX_WORKBOOK_BYTES} byte read limit"
+            )
 
         drive_prefix = self._normalize_drive_location(
             drive_type, site_hostname, site_path, site_id
@@ -460,15 +509,36 @@ class GraphService:
             file_path=file_path,
             suffix="/content",
         )
-        content_bytes = self._request("GET", url, raw=True)
+        content_bytes = self._request(
+            "GET",
+            url,
+            raw=True,
+            max_bytes=MAX_WORKBOOK_BYTES if fmt else None,
+        )
         mime = metadata.get("mime_type") or "application/octet-stream"
+        result["size_bytes"] = len(content_bytes)
+        if fmt:
+            transformed = transform_excel(
+                content_bytes,
+                excel_format=fmt,
+                file_name=metadata.get("name") or "",
+                sheet_name=sheet_name,
+                header_row=header_row,
+            )
+            result["excel_format"] = transformed["format"]
+            result["truncated"] = transformed["truncated"]
+            result["content_text"] = transformed["content_text"]
+            if transformed.get("content_json") is not None:
+                result["content_json"] = transformed["content_json"]
+            if transformed.get("content_xml") is not None:
+                result["content_xml"] = transformed["content_xml"]
+            return result
         if as_text and (
             mime.startswith("text/") or "json" in mime or "xml" in mime
         ):
             result["content_text"] = content_bytes.decode("utf-8", errors="replace")
         else:
             result["content_base64"] = base64.b64encode(content_bytes).decode("ascii")
-        result["size_bytes"] = len(content_bytes)
         return result
 
     def download_file(

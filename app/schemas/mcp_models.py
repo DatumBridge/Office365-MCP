@@ -38,6 +38,10 @@ class ReadFileResponse(BaseToolResponse):
     metadata: Optional[FileMetadata] = None
     content_base64: Optional[str] = None
     content_text: Optional[str] = None
+    content_json: Optional[Dict[str, Any]] = None
+    content_xml: Optional[str] = None
+    excel_format: Optional[str] = None
+    truncated: bool = False
     size_bytes: Optional[int] = None
     message: Optional[str] = None
 
