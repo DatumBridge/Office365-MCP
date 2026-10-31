@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-31
+
+### Added
+
+- **`GET /register`** for the Weaver remote tool gateway. Tenant admins can register this server's HTTPS origin and sync without DevSecOps deploy. Execute stays on `POST /mcp`.
+
 ## 2026-10-30
 
 ### Added

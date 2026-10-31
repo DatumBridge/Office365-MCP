@@ -776,6 +776,16 @@ async def health(request):
     return JSONResponse({"status": "ok", "service": "office365-mcp"})
 
 
+async def register(request):
+    from app.capability_bind import build_register_manifest
+
+    return JSONResponse(
+        build_register_manifest(
+            mcp, server_id="office365", name="Office 365 MCP", version="1.0.0"
+        )
+    )
+
+
 async def test_ui(request):
     if not _oauth_ui_enabled():
         return JSONResponse(
@@ -795,6 +805,7 @@ async def test_ui(request):
 http_app = Starlette(
     routes=[
         Route("/health", health),
+        Route("/register", register),
         Route("/test", test_ui),
         Route("/oauth/start", oauth_start),
         Route("/oauth/callback", oauth_callback),

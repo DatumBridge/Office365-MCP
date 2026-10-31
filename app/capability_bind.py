@@ -50,3 +50,36 @@ def bind_declared_capabilities(mcp) -> None:
         if docs:
             params["x-datumbridge-docs"] = docs
         tool.parameters = params
+
+def build_register_manifest(
+    mcp,
+    *,
+    server_id: str,
+    name: str,
+    version: str = "1.0.0",
+) -> dict:
+    """GET /register body: same tools[] shape as tools/list (remote gateway)."""
+    manager = getattr(mcp, "_tool_manager", None)
+    tools = getattr(manager, "_tools", None) or {}
+    out = []
+    for tool in tools.values():
+        tool_name = (getattr(tool, "name", None) or "").strip()
+        if not tool_name:
+            continue
+        params = dict(getattr(tool, "parameters", None) or {})
+        if "type" not in params:
+            params = {"type": "object", **params}
+        out.append(
+            {
+                "name": tool_name,
+                "description": getattr(tool, "description", "") or "",
+                "inputSchema": params,
+            }
+        )
+    out.sort(key=lambda t: t["name"])
+    return {
+        "server_id": server_id,
+        "name": name,
+        "version": version,
+        "tools": out,
+    }

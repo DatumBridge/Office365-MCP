@@ -68,6 +68,7 @@ chmod +x mcp_server_entrypoint.sh
 ```
 
 - Health: `GET http://localhost:8000/health`
+- Register: `GET http://localhost:8000/register`
 - MCP: `POST http://localhost:8000/mcp/`
 - Test UI: `http://localhost:8000/test` (`OFFICE365_ENABLE_OAUTH_UI=1`)
 

@@ -35,4 +35,5 @@ Agents need cell values, not a base64 blob. Parsing stays inside `read_file` so 
 
 - Container: `Dockerfile` → uvicorn on port 8000
 - Health: `GET /health`
+- Remote gateway: `GET /register`
 - Optional k8s manifest: `k8s/deployment.yaml`

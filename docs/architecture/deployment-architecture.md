@@ -3,6 +3,7 @@
 The server is a single container. `Dockerfile` installs `requirements_mcp.txt` (including `openpyxl`) and runs uvicorn on port 8000 as a non-root user.
 
 - Health check: `GET /health`
+- Remote gateway: `GET /register`
 - MCP endpoint: `POST /mcp/`
 - Optional Kubernetes manifest: `k8s/deployment.yaml` in namespace `mcp-tools`
 

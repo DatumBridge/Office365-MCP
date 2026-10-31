@@ -1,8 +1,12 @@
 # API specification
 
-Office 365 MCP tools are MCP tools, not REST resources. The HTTP app exposes `POST /mcp/` and `GET /health`.
+Office 365 MCP tools are MCP tools, not REST resources. The HTTP app exposes `POST /mcp/`, `GET /health`, and `GET /register`.
 
-The planner contract for each tool is `registry_docs/<tool>.md`, copied onto `x-datumbridge-docs` at bind time. Those guides follow the MCP tool template: audience (`external` / `required`), agent rules, when to call, parameters (name, required, type, sample, related tool, meaning), success fields, error codes, and cases. Deep fills arguments from that text. A schema change is not visible until the image is deployed and Tool Registry Setup runs again.
+### `GET /register`
+
+No session. HTTP 200 JSON install card for the Weaver remote tool gateway: `server_id` (`office365`), `name`, `version`, and `tools[]` with the same fields as `tools/list` (including `x-datumbridge-docs` and `x-datumbridge-capabilities`). Tenant admin Sync stores those rows; execute stays on `POST /mcp/`.
+
+The planner contract for each tool is `registry_docs/<tool>.md`, copied onto `x-datumbridge-docs` at bind time. Those guides follow the MCP tool template: audience (`external` / `required`), agent rules, when to call, parameters (name, required, type, sample, related tool, meaning), success fields, error codes, and cases. Deep fills arguments from that text. A schema change is not visible until the image is deployed and Tool Registry Setup (or remote Sync) runs again.
 
 List tools return `next_skip_token`. They do not return `paging` or `total_page`.
 
@@ -47,3 +51,8 @@ Reads a OneDrive or SharePoint drive item.
 | `RATE_LIMIT` | Graph 429 | true |
 
 Authentication is the bearer token inside the credential JSON. No token is returned in the tool result.
+
+## `GET /register`
+
+Remote gateway install card. HTTP 200 JSON with `server_id`, `name`, `version`, and `tools[]` (same fields as `tools/list`). No session.
+
